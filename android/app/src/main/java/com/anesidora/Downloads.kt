@@ -36,7 +36,12 @@ object Downloads {
             audio
         }
 
-        val fileName = "${baseFileName(track, settings)}.$extension"
+        val fileName = "${
+            baseFileName(
+                track.songName, track.artistName, track.albumName, track.musicId,
+                settings.downloadNameFormat, settings.downloadNameUnderscores,
+            )
+        }.$extension"
         val resolver = context.contentResolver
         val values = ContentValues().apply {
             put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
@@ -80,16 +85,26 @@ object Downloads {
                 (audio[0] == 0xFF.toByte() && (audio[1].toInt() and 0xE0) == 0xE0 && (audio[1].toInt() and 0x06) != 0)
             )
 
-    private fun baseFileName(track: Track, settings: Settings): String =
-        (settings.downloadNameFormat ?: "%artistname% - %trackname%")
-            .replace("%trackname%", track.songName)
-            .replace("%artistname%", track.artistName)
-            .replace("%albumname%", track.albumName)
-            .replace("%trackid%", track.musicId ?: "")
+    /** The download's name without its extension; also used for the preview in settings. */
+    fun baseFileName(
+        songName: String,
+        artistName: String,
+        albumName: String,
+        musicId: String?,
+        format: String?,
+        useUnderscores: Boolean,
+    ): String {
+        val name = (format ?: Settings.DEFAULT_DOWNLOAD_NAME_FORMAT)
+            .replace("%trackname%", songName)
+            .replace("%artistname%", artistName)
+            .replace("%albumname%", albumName)
+            .replace("%trackid%", musicId ?: "")
             .replace(Regex("""[\\/:*?"<>|\u0000-\u001f]"""), "_")
             .trim()
+        return (if (useUnderscores) name.replace(Regex("""\s+"""), "_") else name)
             .take(MAXIMUM_FILENAME_LENGTH)
             .ifEmpty { "Anesidora download" }
+    }
 }
 
 /** A minimal ID3v2.3 writer: title, artist, album, and front cover. */

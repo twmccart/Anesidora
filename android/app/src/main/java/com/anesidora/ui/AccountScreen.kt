@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.anesidora.Downloads
 import com.anesidora.Radio
 
 @Composable
@@ -155,10 +156,23 @@ private fun SettingsSection() {
         value = settings.downloadNameFormat ?: "",
         onValueChange = { settings.downloadNameFormat = it },
         label = { Text("Download file name") },
-        supportingText = { Text("%artistname%, %trackname%, %albumname%, %trackid%") },
+        supportingText = {
+            val example = Downloads.baseFileName(
+                songName = "Johnny Got A Boom Boom (Radio Edit)",
+                artistName = "Imelda May",
+                albumName = "More Mayhem",
+                musicId = "S1234567",
+                format = settings.downloadNameFormat,
+                useUnderscores = settings.downloadNameUnderscores,
+            )
+            Text("%artistname%, %trackname%, %albumname%, %trackid%\nFor example: $example.mp3")
+        },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
+    SettingSwitch("Use underscores instead of spaces in file names", settings.downloadNameUnderscores) {
+        settings.downloadNameUnderscores = it
+    }
     Spacer(Modifier.height(16.dp))
     Text(
         "Ads are always skipped. Downloads are saved to Music/Anesidora. " +

@@ -32,7 +32,8 @@ class Settings(context: Context) {
     var pauseAfterInactivity by booleanPreference("pauseAfterInactivity", true)
     var inactivityMinutes by intPreference("inactivityMinutes", 60 * 5)
     var tagDownloads by booleanPreference("tagDownloads", true)
-    var downloadNameFormat by stringPreference("downloadNameFormat", "%artistname% - %trackname%")
+    var downloadNameFormat by stringPreference("downloadNameFormat", DEFAULT_DOWNLOAD_NAME_FORMAT)
+    var downloadNameUnderscores by booleanPreference("downloadNameUnderscores", true)
 
     /** Station ids in the user's chosen order. Kept per account, and across logouts. */
     fun stationOrder(email: String): List<String> =
@@ -49,6 +50,10 @@ class Settings(context: Context) {
             return if (savedEmail.isNullOrEmpty() || savedPassword.isNullOrEmpty()) null
             else savedEmail to savedPassword
         }
+
+    companion object {
+        const val DEFAULT_DOWNLOAD_NAME_FORMAT = "%artistname%-%trackname%"
+    }
 
     private fun stringPreference(key: String, default: String? = null) =
         preference(key, preferences.getString(key, default)) { editor, value -> editor.putString(key, value) }
