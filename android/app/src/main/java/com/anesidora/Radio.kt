@@ -215,15 +215,38 @@ object Radio {
             try {
                 val result = client.call("user.getStationList", JSONObject().put("includeStationArtUrl", true))
                 val stationsJson = result.getJSONArray("stations")
-                mutableStations.value = (0 until stationsJson.length()).map { index ->
+                val stationsFromPandora = (0 until stationsJson.length()).map { index ->
                     Station.fromJson(stationsJson.getJSONObject(index))
                 }
+                mutableStations.value = inSavedOrder(stationsFromPandora)
             } catch (exception: PandoraException) {
                 showMessage("Couldn't load stations: ${exception.message}")
             } finally {
                 mutableRefreshingStations.value = false
             }
         }
+    }
+
+    /** Stations the user has arranged come first, in their order; new ones follow in Pandora's order. */
+    private fun inSavedOrder(stationsFromPandora: List<Station>): List<Station> {
+        val email = mutableAccount.value.email ?: return stationsFromPandora
+        val savedPositions = settings.stationOrder(email).withIndex().associate { (index, id) -> id to index }
+        return stationsFromPandora.sortedBy { savedPositions[it.stationId] ?: Int.MAX_VALUE }
+    }
+
+    /** Called continuously while a station is being dragged; [saveStationOrder] persists the result. */
+    fun moveStation(fromIndex: Int, toIndex: Int) {
+        val reordered = mutableStations.value.toMutableList()
+        if (fromIndex !in reordered.indices || toIndex !in reordered.indices) {
+            return
+        }
+        reordered.add(toIndex, reordered.removeAt(fromIndex))
+        mutableStations.value = reordered
+    }
+
+    fun saveStationOrder() {
+        val email = mutableAccount.value.email ?: return
+        settings.setStationOrder(email, mutableStations.value.map { it.stationId })
     }
 
     fun stationName(stationId: String?): String? =

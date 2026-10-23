@@ -50,4 +50,5 @@ dependencies {
     implementation("androidx.media3:media3-session:1.5.1")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("sh.calvin.reorderable:reorderable:2.5.1")
 }

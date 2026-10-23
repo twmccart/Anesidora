@@ -34,6 +34,14 @@ class Settings(context: Context) {
     var tagDownloads by booleanPreference("tagDownloads", true)
     var downloadNameFormat by stringPreference("downloadNameFormat", "%artistname% - %trackname%")
 
+    /** Station ids in the user's chosen order. Kept per account, and across logouts. */
+    fun stationOrder(email: String): List<String> =
+        preferences.getString("stationOrder:$email", null)?.split("\n")?.filter { it.isNotEmpty() } ?: emptyList()
+
+    fun setStationOrder(email: String, stationIds: List<String>) {
+        preferences.edit().putString("stationOrder:$email", stationIds.joinToString("\n")).apply()
+    }
+
     val credentials: Pair<String, String>?
         get() {
             val savedEmail = email

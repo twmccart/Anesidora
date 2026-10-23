@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
@@ -34,6 +36,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.anesidora.Radio
 import com.anesidora.Station
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun StationsScreen(onStationChosen: () -> Unit) {
@@ -79,16 +83,39 @@ fun StationsScreen(onStationChosen: () -> Unit) {
                 )
             }
         } else {
-            LazyColumn {
+            // Reordering a filtered list would be ambiguous, so drag handles only show unfiltered.
+            val reorderable = filter.isBlank()
+            val listState = rememberLazyListState()
+            val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+                Radio.moveStation(from.index, to.index)
+            }
+            LazyColumn(state = listState) {
                 items(shown, key = { it.stationToken }) { station ->
-                    StationRow(
-                        station,
-                        current = station.stationToken == currentStationToken,
-                        onClick = {
-                            Radio.playStation(station.stationToken)
-                            onStationChosen()
-                        },
-                    )
+                    ReorderableItem(reorderState, key = station.stationToken, enabled = reorderable) { dragging ->
+                        StationRow(
+                            station,
+                            current = station.stationToken == currentStationToken,
+                            dragging = dragging,
+                            onClick = {
+                                Radio.playStation(station.stationToken)
+                                onStationChosen()
+                            },
+                            dragHandle = if (reorderable) {
+                                {
+                                    Icon(
+                                        Icons.Filled.DragHandle,
+                                        contentDescription = "Drag to reorder",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .draggableHandle(onDragStopped = { Radio.saveStationOrder() })
+                                            .padding(12.dp),
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -96,13 +123,24 @@ fun StationsScreen(onStationChosen: () -> Unit) {
 }
 
 @Composable
-private fun StationRow(station: Station, current: Boolean, onClick: () -> Unit) {
+private fun StationRow(
+    station: Station,
+    current: Boolean,
+    dragging: Boolean,
+    onClick: () -> Unit,
+    dragHandle: (@Composable () -> Unit)?,
+) {
+    val background = when {
+        dragging -> MaterialTheme.colorScheme.surfaceContainerHighest
+        current -> MaterialTheme.colorScheme.secondaryContainer
+        else -> MaterialTheme.colorScheme.surface
+    }
     Row(
         Modifier
             .fillMaxWidth()
-            .then(if (current) Modifier.background(MaterialTheme.colorScheme.secondaryContainer) else Modifier)
+            .background(background)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (station.isQuickMix) {
@@ -120,7 +158,8 @@ private fun StationRow(station: Station, current: Boolean, onClick: () -> Unit) 
             fontWeight = if (current) FontWeight.Bold else FontWeight.Normal,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 12.dp),
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
         )
+        dragHandle?.invoke()
     }
 }
